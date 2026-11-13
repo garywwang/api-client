@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src __CSP_SOURCE__ data:; style-src __CSP_SOURCE__ 'unsafe-inline'; script-src __CSP_SOURCE__; font-src __CSP_SOURCE__;" />
+  <link rel="stylesheet" href="__STYLES__" />
+  <title>API Client · 接口管理</title>
+</head>
+<body>
+  <div id="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-logo">API</span>
+        <span class="brand-title">接口管理</span>
+        <span class="brand-sub">CodeBuddy API Client</span>
+      </div>
+      <div class="top-actions">
+        <button class="chip-btn" data-action="toggleMockMode" id="mockModeBtn" title="开启后所有请求不发真实网络请求，直接返回该接口配置的 Mock 数据">Mock 拦截：关</button>
+        <button class="chip-btn" data-action="mockServer" id="mockServerBtn" title="启动/停止本地 HTTP Mock 服务，供外部程序按 Method + Path 调用">Mock 服务</button>
+        <span class="top-sep"></span>
+        <button class="chip-btn" data-action="runAll" title="运行所有接口的断言与前置/后置脚本用例，生成测试报告">运行测试</button>
+        <button class="chip-btn" data-action="import" title="导入 Postman / OpenAPI / Apifox / API Client 备份文件">导入</button>
+        <span class="top-sep"></span>
+        <div class="env-switch" title="唯一的请求环境入口：切换后 {{变量}} 立即按所选环境生效">
+          <span class="env-dot"></span>
+          <select id="envSelectTop" title="切换环境（下拉项含该环境的 baseUrl 预览）"></select>
+          <button class="icon-btn" data-action="editEnv" title="管理环境、变量与内置动态变量">⚙</button>
+        </div>
+        <button class="primary-btn" data-action="export" title="导出全部接口，可导入 Postman / Apifox">一键导出</button>
+        <button class="icon-btn" data-action="settings" title="项目设置">☰</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <aside class="sidebar">
+        <div class="side-head">
+          <input id="searchInput" class="search-input" placeholder="搜索接口 / 用例" />
+          <button class="add-btn" data-action="addMenu" title="新建">+</button>
+        </div>
+        <nav class="quick-nav" id="quickNav"></nav>
+        <div class="tree-scroll"><div class="tree" id="tree"></div></div>
+        <div class="side-foot" id="sideFoot"></div>
+      </aside>
+
+      <main class="main" id="main"></main>
+    </div>
+
+    <div id="toast" class="toast"></div>
+    <div id="modalRoot"></div>
+    <div id="contextMenu" class="context-menu hidden"></div>
+  </div>
+  <script src="__APP__"></script>
+</body>
+</html>

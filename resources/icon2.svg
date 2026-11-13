@@ -1,0 +1,25 @@
+<svg width="128" height="128" viewBox="0 0 128 128" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="g" x1="24" y1="16" x2="104" y2="112" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06B6D4"/>
+      <stop offset="1" stop-color="#8B5CF6"/>
+    </linearGradient>
+    <filter id="gl" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="4" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+  </defs>
+
+  <!-- 节点六边形 -->
+  <path d="M64 12 L108 38 V90 L64 116 L20 90 V38 Z" 
+        fill="url(#g)" fill-opacity="0.12" 
+        stroke="url(#g)" stroke-width="4" stroke-linejoin="round"/>
+
+  <!-- 极速闪电 -->
+  <path d="M70 30 L42 68 H62 L56 98 L88 56 H66 L70 30 Z" 
+        fill="url(#g)" filter="url(#gl)"/>
+
+  <!-- 飘散的 Payload 粒子 -->
+  <circle cx="98" cy="30" r="5" fill="#06B6D4" filter="url(#gl)"/>
+  <circle cx="26" cy="98" r="3" fill="#8B5CF6" filter="url(#gl)"/>
+</svg>

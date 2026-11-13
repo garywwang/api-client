@@ -4,7 +4,7 @@
 
 不需要启动额外服务、不需要登录账号，所有数据保存在本地编辑器中，请求由本地扩展宿主直接发出。
 
-![全局](resources/image_1.png)
+![全局](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_1.png)
 
 
 ## 为什么选择 API Client
@@ -24,7 +24,7 @@
 **方式二：安装 VSIX**
 
 ```bash
-code --install-extension vsix/api-client-1.0.5.vsix   # 换成 vsix/ 目录下最新版本
+code --install-extension vsix/api-client-1.0.6.vsix   # 换成 vsix/ 目录下最新版本
 ```
 
 或在扩展面板右上角选择「从 VSIX 安装…」，选中 `vsix/` 目录下最新的 `.vsix` 文件。
@@ -50,7 +50,7 @@ npm run package   # 生成 vsix/api-client-<version>.vsix
 
 ## 功能演示
 
-![请求与响应](resources/image_2.png)
+![请求与响应](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_2.png)
 
 
 ## 核心功能
@@ -85,7 +85,7 @@ npm run package   # 生成 vsix/api-client-<version>.vsix
 
 同一次请求内多处引用同一个动态变量取值保持一致。
 
-![环境与内置变量](resources/image_3.png)
+![环境与内置变量](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_3.png)
 
 
 ### 3. 自动化测试
@@ -95,7 +95,7 @@ npm run package   # 生成 vsix/api-client-<version>.vsix
 - 支持单接口运行与全量批量运行，生成通过率报告；前置/后置脚本中的 `assert()` 结果也会并入报告。
 - `Mock 拦截` 开启时可直接用 Mock 数据跑用例，无需真实后端。
 
-![自动化测试报告](resources/image_4.png)
+![自动化测试报告](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_4.png)
 
 
 ### 4. 前置操作 / 后置操作（脚本）
@@ -139,7 +139,7 @@ if (data.data && data.data.token) setVariable('token', data.data.token);
 
 > 安全提示：脚本在本地受限沙箱中运行，不提供 `require` / `process`；`vm` 并非绝对安全边界，请只运行自己编写或可信来源的脚本。
 
-![前置/后置脚本](resources/image_6.png)
+![前置/后置脚本](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_6.png)
 
 
 ### 5. 临时测试用例
@@ -152,7 +152,7 @@ if (data.data && data.data.token) setVariable('token', data.data.token);
 - **Mock 拦截**：顶部开关开启后，所有请求直接返回本地 Mock 数据，不发真实网络请求。
 - **本地 Mock HTTP 服务**：启动后监听 `127.0.0.1:<port>`，按 Method + Path 匹配已启用 Mock 的接口，外部程序可直接调用；工作台内可查看已注册路由、复制地址，或一键把当前环境 Host 指向它。
 
-![Mock 配置](resources/image_7.png)
+![Mock 配置](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_7.png)
 
 
 ### 7. 一键导出与导入
@@ -166,7 +166,7 @@ if (data.data && data.data.token) setVariable('token', data.data.token);
 
 导出时可选择把 `{{变量}}` 展开为当前环境真实值；也可把内容直接复制到剪贴板。前置/后置脚本会写入 Postman 的 `prerequest` / `test` 事件，Apifox 格式则写入 `x-apifox-*` 扩展字段。导入时会自动识别 Postman、OpenAPI/Swagger、Apifox 导出文件及原生备份，并可选择「合并」或「替换」。
 
-![一键导出](resources/image_5.png)
+![一键导出](https://raw.githubusercontent.com/wangbin926957/api-client/main/resources/image_5.png)
 
 
 ### 8. 编辑体验
