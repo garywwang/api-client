@@ -155,7 +155,7 @@ console.log('响应耗时:', response.time + 'ms');`;
   const R = {                   // 运行时状态（不持久化）
     view: 'request', mainTab: 'debug', subTab: 'body', respTab: 'body', respSub: 'pretty',
     tempId: '', response: null, report: null, sending: false, search: '',
-    reportFilter: '', modal: null, exportFormat: 'postman'
+    reportFilter: '', modal: null, exportFormat: 'postman', exportScope: null
   };
 
   let seq = 0;
@@ -235,8 +235,10 @@ console.log('响应耗时:', response.time + 'ms');`;
   }
   function closeModal() {
     const refreshEnv = !!(R.modal && R.modal.type === 'env');
+    const wasExport = !!(R.modal && R.modal.type === 'export');
     document.getElementById('modalRoot').innerHTML = '';
     R.modal = null;
+    if (wasExport) R.exportScope = null;
     if (refreshEnv) renderAll();
   }
   function showModal(title, body, footer, wide = false) {
@@ -341,12 +343,13 @@ console.log('响应耗时:', response.time + 'ms');`;
     const match = r => !q || (r.name + r.url + r.method).toLowerCase().includes(q);
 
     const reqRow = r => `<div class="tree-request ${(!R.tempId && S.activeTabId === r.id && R.view === 'request') ? 'active' : ''}"
-        data-action="openRequest" data-arg="${esc(r.id)}" title="${esc(r.url)}">
+        data-action="openRequest" data-arg="${esc(r.id)}" data-req-id="${esc(r.id)}" draggable="true" title="${esc(r.url)}（可拖动到其他分组）">
         <span class="method ${methodClass(r.method)}">${esc(r.method)}</span>
         <span class="rname">${esc(r.name)}</span>
         <span class="more" data-action="treeMore" data-arg="req:${esc(r.id)}">⋯</span>
       </div>`;
 
+    const countOf = fid => reqsOf(fid).length + childrenOf(fid).reduce((n, k) => n + countOf(k.id), 0);
     const folderNode = (f, depth) => {
       const kids = childrenOf(f.id);
       const reqs = reqsOf(f.id).filter(match);
@@ -354,12 +357,12 @@ console.log('响应耗时:', response.time + 'ms');`;
       if (!visible) return '';
       const collapsed = f.expanded === false && !q;
       return `<div class="tree-group">
-        <div class="tree-folder ${collapsed ? 'collapsed' : ''}" data-action="toggleFolder" data-arg="${esc(f.id)}">
+        <div class="tree-folder ${collapsed ? 'collapsed' : ''}" data-action="toggleFolder" data-arg="${esc(f.id)}" data-folder-id="${esc(f.id)}" title="${esc(f.name)}（可将接口拖到此处）">
           <span class="caret">▼</span><span class="folder-icon">▣</span>
-          <span class="fname">${esc(f.name)}</span><span class="fcount">${reqs.reduce((n, r) => n + 1, 0) + kids.reduce((n, k) => n + reqsOf(k.id).length, 0)}</span>
+          <span class="fname">${esc(f.name)}</span><span class="fcount">${countOf(f.id)}</span>
           <span class="more" data-action="treeMore" data-arg="fld:${esc(f.id)}">⋯</span>
         </div>
-        <div class="tree-children ${collapsed ? 'hidden' : ''}">
+        <div class="tree-children ${collapsed ? 'hidden' : ''}" data-folder-id="${esc(f.id)}">
           ${kids.map(k => folderNode(k, depth + 1)).join('')}
           ${reqs.map(reqRow).join('')}
         </div>
@@ -369,7 +372,7 @@ console.log('响应耗时:', response.time + 'ms');`;
     const orphan = (S.requests || []).filter(r => !r.folderId || !folders.some(f => f.id === r.folderId)).filter(match);
     const tempMatch = (S.temporary || []).filter(match);
     const html = roots.map(f => folderNode(f, 0)).join('') +
-      (orphan.length ? `<div class="tree-group"><div class="tree-folder"><span class="caret"></span><span class="folder-icon">▣</span><span class="fname">未分组</span></div><div class="tree-children">${orphan.map(reqRow).join('')}</div></div>` : '') +
+      (orphan.length ? `<div class="tree-group"><div class="tree-folder" data-folder-id="" title="拖到此处可移出分组"><span class="caret"></span><span class="folder-icon">▣</span><span class="fname">未分组</span></div><div class="tree-children" data-folder-id="">${orphan.map(reqRow).join('')}</div></div>` : '') +
       (tempMatch.length && R.view === 'temporary' ? `<div class="tree-group"><div class="tree-folder"><span class="caret"></span><span class="fname">临时用例</span></div><div class="tree-children">${tempMatch.map(r => `<div class="tree-request" data-action="openTemp" data-arg="${esc(r.id)}"><span class="method ${methodClass(r.method)}">${esc(r.method)}</span><span class="rname">${esc(r.name)}</span></div>`).join('')}</div></div>` : '');
     document.getElementById('tree').innerHTML = html || `<div class="tree-empty">${q ? '没有匹配的接口' : '暂无接口<br>点击右上角 + 新建一个接口'}</div>`;
   }
@@ -911,25 +914,51 @@ console.log('响应耗时:', response.time + 'ms');`;
     renderAll();
   }
 
-  function openExportModal() {
+  function openExportModal(scope) {
+    if (scope !== undefined) R.exportScope = scope;
     const formats = meta.formats || [];
-    const d = (R.modal && R.modal.type === 'export' && R.modal.data) || { name: 'API Client 导出的接口集合', resolveVars: false };
+    const scoped = !!(R.exportScope && R.exportScope.requestIds && R.exportScope.requestIds.length);
+    const one = scoped ? (S.requests || []).find(r => r.id === R.exportScope.requestIds[0]) : null;
+    const defaultName = scoped ? (one ? one.name : '导出的接口') : 'API Client 导出的接口集合';
+    const d = (R.modal && R.modal.type === 'export' && R.modal.data) || { name: defaultName, resolveVars: false };
     const body = `<div class="modal-section"><span class="lbl">导出格式</span>
       ${formats.map(f => `<div class="format-option ${R.exportFormat === f.id ? 'selected' : ''}" data-action="chooseFormat" data-arg="${esc(f.id)}">
         <input type="radio" ${R.exportFormat === f.id ? 'checked' : ''} style="margin-top:3px" /><div><div class="fname">${esc(f.label)}</div><div class="fdesc">${esc(f.desc)} · 文件名 apiClient.${esc(f.ext)}</div></div></div>`).join('')}
       </div>
       <div class="modal-section"><span class="lbl">集合名称</span><input class="modal-input" data-modal-field="name" value="${esc(d.name)}" /></div>
       <div class="modal-section"><label class="switch"><input type="checkbox" data-modal-field="resolveVars" ${d.resolveVars ? 'checked' : ''} /> 导出时将 {{变量}} 展开为当前环境的真实值</label>
-        <div class="modal-note">共 ${(S.requests || []).length} 个接口、${(S.temporary || []).length} 个临时用例、${(S.environments || []).length - 1} 套环境配置。
+        <div class="modal-note">${scoped
+          ? `本次仅导出 <b>1</b> 个接口：${esc(one ? one.name : '')}，并保留其所属分组层级。`
+          : `共 ${(S.requests || []).length} 个接口、${(S.temporary || []).length} 个临时用例、${(S.environments || []).length - 1} 套环境配置。`}
         导出后可在 Postman 选择「Import → File」，或在 Apifox 选择「项目设置 → 导入数据 → OpenAPI/Postman」重新导入。</div></div>`;
     const footer = `<button class="ghost-btn" data-action="copyExport">复制到剪贴板</button><button class="ghost-btn" data-action="closeModal">取消</button><button class="primary-btn" data-action="doExport">导出到文件</button>`;
     R.modal = { type: 'export', data: d };
-    showModal('一键导出所有请求', body, footer);
+    showModal(scoped ? '导出接口' : '一键导出所有请求', body, footer);
   }
 
   async function exportParams() {
-    const d = R.modal && R.modal.data || {};
-    return { format: R.exportFormat, resolveVars: !!d.resolveVars, name: d.name || 'API Client 导出的接口集合', state: stateForSave() };
+    const d = (R.modal && R.modal.data) || {};
+    const state = stateForSave();
+    const scope = R.exportScope;
+    if (scope && scope.requestIds && scope.requestIds.length) {
+      const ids = new Set(scope.requestIds);
+      const list = (state.requests || []).filter(r => ids.has(r.id));
+      const allFolders = state.folders || [];
+      const keep = new Set();
+      for (const r of list) {
+        let fid = r.folderId;
+        while (fid) {
+          const f = allFolders.find(x => x.id === fid);
+          if (!f || keep.has(fid)) break;
+          keep.add(fid);
+          fid = f.parentId;
+        }
+      }
+      state.requests = list;
+      state.temporary = [];
+      state.folders = allFolders.filter(f => keep.has(f.id));
+    }
+    return { format: R.exportFormat, resolveVars: !!d.resolveVars, name: d.name || 'API Client 导出的接口集合', state };
   }
 
   async function doExport() {
@@ -1194,7 +1223,8 @@ console.log('响应耗时:', response.time + 'ms');`;
         env.variables.splice(Number(arg), 1); scheduleSave(); renderEnvModal(); break;
       }
       case 'envActivate': S.activeEnvId = R.modal.envId; scheduleSave(); renderAll(); toast('已切换环境：' + activeEnv().name, 'success'); break;
-      case 'export': openExportModal(); break;
+      case 'export': openExportModal(null); break;
+      case 'exportRequest': openExportModal({ requestIds: [arg] }); break;
       case 'chooseFormat': R.exportFormat = arg; openExportModal(); break;
       case 'doExport': doExport(); break;
       case 'copyExport': copyExport(); break;
@@ -1231,6 +1261,15 @@ console.log('响应耗时:', response.time + 'ms');`;
         if (m.action === 'newFolder') {
           S.folders.push({ id: uid('fld'), name: value, parentId: '', expanded: true });
           toast('分组已创建', 'success');
+        } else if (m.action.startsWith('newSubFolder::')) {
+          const parentId = m.action.slice('newSubFolder::'.length);
+          const parent = S.folders.find(f => f.id === parentId);
+          if (parent) {
+            S.folders.push({ id: uid('fld'), name: value, parentId, expanded: true });
+            parent.expanded = true;
+            R.lastFolderId = parentId;
+            toast('子分组已创建', 'success');
+          } else toast('父分组不存在', 'error');
         } else if (m.action.startsWith('rename::')) {
           const marker = m.action.slice('rename::'.length);
           const [k, ident] = marker.split('::');
@@ -1256,10 +1295,12 @@ console.log('响应耗时:', response.time + 'ms');`;
       ? [
           { label: '重命名分组', action: 'rename', arg: `fld::${id}::${(S.folders.find(f => f.id === id) || {}).name || ''}` },
           { label: '在此分组新建接口', action: 'newChild', arg: id },
+          { label: '在此分组新建子分组', action: 'newSubFolder', arg: id },
           { label: '删除分组', action: 'removeFolder', arg: id, danger: true }
         ]
       : [
           { label: '重命名接口', action: 'rename', arg: `req::${id}::${(S.requests.find(x => x.id === id) || {}).name || ''}` },
+          { label: '导出接口…', action: 'exportRequest', arg: id },
           { label: '复制接口', action: 'duplicate', arg: `req::${id}::${(S.requests.find(x => x.id === id) || {}).name || ''} 副本` },
           { label: '删除接口', action: 'removeRequest', arg: id, danger: true }
         ];
@@ -1275,15 +1316,24 @@ console.log('响应耗时:', response.time + 'ms');`;
       if (action === 'rename' || action === 'duplicate') {
         const [kind, id, name] = arg.split('::');
         promptModal(action === 'rename' ? '重命名' : '复制接口', '名称', name, `${action}::${kind}::${id}`);
+      } else if (action === 'newSubFolder') {
+        promptModal('新建子分组', '子分组名称', '新建子分组', 'newSubFolder::' + arg);
       } else if (action === 'removeRequest') {
         S.requests = S.requests.filter(r => r.id !== arg);
         S.openTabs = S.openTabs.filter(id => id !== arg);
         if (S.activeTabId === arg) S.activeTabId = S.openTabs[0] || '';
         saveNow(); renderAll();
       } else if (action === 'removeFolder') {
-        const childIds = S.folders.filter(f => f.parentId === arg).map(f => f.id);
-        S.folders = S.folders.filter(f => f.id !== arg && f.parentId !== arg);
-        S.requests.forEach(r => { if (r.folderId === arg || childIds.includes(r.folderId)) r.folderId = ''; });
+        const doomed = new Set([arg]);
+        let changed = true;
+        while (changed) {
+          changed = false;
+          for (const f of S.folders) {
+            if (f.parentId && doomed.has(f.parentId) && !doomed.has(f.id)) { doomed.add(f.id); changed = true; }
+          }
+        }
+        S.folders = S.folders.filter(f => !doomed.has(f.id));
+        S.requests.forEach(r => { if (doomed.has(r.folderId)) r.folderId = ''; });
         saveNow(); renderAll();
       } else if (action === 'newChild') {
         const f = newRequest({ name: '新建接口', folderId: arg });
@@ -1299,6 +1349,54 @@ console.log('响应耗时:', response.time + 'ms');`;
     e.stopPropagation();
     doAction(el.dataset.action, el.dataset.arg || '', el);
   });
+
+  /* ------------------------------ 拖拽：接口移动到任意分组 / 子分组 ------------------------------ */
+  let draggingReqId = null;
+  function clearDropState() {
+    draggingReqId = null;
+    document.querySelectorAll('.tree-request.dragging').forEach(el => el.classList.remove('dragging'));
+    document.querySelectorAll('.drop-target').forEach(el => el.classList.remove('drop-target'));
+  }
+  document.addEventListener('dragstart', e => {
+    const row = e.target.closest && e.target.closest('[data-req-id]');
+    if (!row) return;
+    draggingReqId = row.dataset.reqId;
+    row.classList.add('dragging');
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+      try { e.dataTransfer.setData('text/plain', draggingReqId); } catch (err) { /* 部分环境不允许写入 */ }
+    }
+  });
+  document.addEventListener('dragover', e => {
+    if (!draggingReqId) return;
+    const zone = e.target.closest && e.target.closest('[data-folder-id]');
+    if (!zone) return;
+    e.preventDefault();
+    if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+    document.querySelectorAll('.drop-target').forEach(el => { if (el !== zone) el.classList.remove('drop-target'); });
+    zone.classList.add('drop-target');
+  });
+  document.addEventListener('dragleave', e => {
+    const zone = e.target.closest && e.target.closest('[data-folder-id]');
+    if (zone && !zone.contains(e.relatedTarget)) zone.classList.remove('drop-target');
+  });
+  document.addEventListener('drop', e => {
+    const zone = e.target.closest && e.target.closest('[data-folder-id]');
+    if (!zone || !draggingReqId) return;
+    e.preventDefault();
+    const req = (S.requests || []).find(r => r.id === draggingReqId);
+    const target = zone.dataset.folderId || '';
+    if (req && req.folderId !== target) {
+      req.folderId = target;
+      const folder = target && (S.folders || []).find(f => f.id === target);
+      if (folder) folder.expanded = true;
+      const label = folder ? `「${folder.name}」` : '「未分组」';
+      clearDropState();
+      saveNow(); renderAll();
+      toast(`已将「${req.name}」移动到 ${label}`, 'success');
+    } else clearDropState();
+  });
+  document.addEventListener('dragend', clearDropState);
 
   document.addEventListener('input', e => {
     const t = e.target;

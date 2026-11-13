@@ -491,3 +491,14 @@ body.vscode-dark .var-ref.undefined, body.vscode-high-contrast .var-ref.undefine
 .code-highlight .var-ref, .url-highlight .var-ref { padding: 0; }
 .code-highlight .j-str, .code-highlight .j-key, .code-highlight .j-num,
 .code-highlight .j-bool, .code-highlight .j-comment, .code-highlight .j-kw { font-weight: 400; }
+
+/* ---------- 接口树：操作入口常显 + 拖拽移动 ---------- */
+.tree-request .more { opacity: .6; }
+.tree-request.active .more { opacity: 1; }
+.tree-request[draggable="true"] { cursor: grab; }
+.tree-request[draggable="true"]:active { cursor: grabbing; }
+.tree-request.dragging { opacity: .35; }
+.tree-folder[data-folder-id], .tree-children[data-folder-id] { transition: background .12s; }
+.tree-folder.drop-target { background: var(--primary-soft); outline: 1px dashed var(--primary); color: var(--primary); }
+.tree-children.drop-target { background: rgba(155, 130, 255, .08); border-radius: 4px; }
+.context-menu .cm-sep { height: 1px; margin: 4px 2px; background: var(--border); }

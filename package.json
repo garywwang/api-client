@@ -1,9 +1,9 @@
 {
-  "name": "api-client",
+  "name": "api-client-tools",
   "displayName": "API Client · 接口管理",
   "description": "类 Apifox 的 HTTP 接口调试工具：环境 Host 配置、自动化测试、临时用例、Mock 数据、一键导出并导入 Postman / Apifox",
-  "version": "1.0.6",
-  "publisher": "wangbin",
+  "version": "1.0.8",
+  "publisher": "wangbin6957",
   "license": "MIT",
   "repository": {
     "type": "git",
