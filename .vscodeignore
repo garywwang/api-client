@@ -4,3 +4,4 @@ node_modules/**
 .gitignore
 *.vsix
 npm-debug.log*
+scripts/**
