@@ -2,6 +2,34 @@
 
 const KEY = 'apiClient.state.v1';
 const { uid, emptyRequest } = require('./importer');
+const fs = require('fs');
+const os = require('os');
+const path = require('path');
+
+/**
+ * globalState 按扩展 ID（publisher.name）隔离，改 ID / 覆盖安装会读到一份全新的空状态。
+ * 因此额外把状态双写到一个与扩展 ID 无关的固定文件，作为跨版本、跨 ID 的迁移载体。
+ */
+const BACKUP_DIR = path.join(os.homedir(), '.api-client-tools');
+const BACKUP_FILE = path.join(BACKUP_DIR, 'state.json');
+
+function readBackup() {
+  try {
+    const data = JSON.parse(fs.readFileSync(BACKUP_FILE, 'utf8'));
+    return data && Array.isArray(data.requests) ? data : null;
+  } catch (e) { return null; }
+}
+
+function writeBackup(state) {
+  try {
+    fs.mkdirSync(BACKUP_DIR, { recursive: true });
+    fs.writeFileSync(BACKUP_FILE, JSON.stringify(state), { encoding: 'utf8', mode: 0o600 });
+  } catch (e) { /* 无写权限时静默降级，仍以 globalState 为准 */ }
+}
+
+function removeBackup() {
+  try { fs.unlinkSync(BACKUP_FILE); } catch (e) { /* 不存在则忽略 */ }
+}
 
 function defaultState() {
   const fUsers = 'fld_users';
@@ -138,17 +166,22 @@ function normalize(input) {
 function createStore(context) {
   return {
     get() {
-      return normalize(context.globalState.get(KEY));
+      const local = context.globalState.get(KEY);
+      // 仅当本扩展 ID 下从未保存过数据时，才从跨 ID 的备份恢复
+      const source = (local !== undefined && local !== null) ? local : readBackup();
+      return normalize(source);
     },
     set(state) {
       const clean = normalize(state);
+      writeBackup(clean);
       return context.globalState.update(KEY, clean).then(() => clean);
     },
     async reset() {
       await context.globalState.update(KEY, undefined);
+      removeBackup();
       return normalize(undefined);
     }
   };
 }
 
-module.exports = { createStore, normalize, defaultState, normalizeRequest, KEY };
+module.exports = { createStore, normalize, defaultState, normalizeRequest, KEY, BACKUP_FILE };

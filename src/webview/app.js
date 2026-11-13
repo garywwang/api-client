@@ -459,11 +459,107 @@ console.log('响应耗时:', response.time + 'ms');`;
       ${!list.length ? '<div class="empty-hint">暂无数据，点击「+ 添加一行」开始配置</div>' : ''}`;
   }
 
+  /* ------------------------------ JSON 块折叠 ------------------------------ */
+  const foldState = new Map(); // histKey -> Set(原始起始行号 0-based)
+
+  function foldRanges(text) {
+    const lines = String(text || '').split('\n');
+    const stack = [], ranges = [];
+    lines.forEach((line, idx) => {
+      let inStr = false, escaped = false;
+      for (let i = 0; i < line.length; i++) {
+        const c = line[i];
+        if (inStr) {
+          if (escaped) escaped = false;
+          else if (c === '\\') escaped = true;
+          else if (c === '"') inStr = false;
+          continue;
+        }
+        if (c === '"') { inStr = true; continue; }
+        if (c === '{' || c === '[') stack.push({ line: idx });
+        else if (c === '}' || c === ']') {
+          const open = stack.pop();
+          if (open && open.line < idx) ranges.push({ start: open.line, end: idx });
+        }
+      }
+    });
+    return ranges;
+  }
+
+  function buildFoldView(fullText, starts) {
+    const lines = String(fullText || '').split('\n');
+    const all = foldRanges(fullText);
+    const chosen = all.filter(r => starts.has(r.start) && !all.some(o =>
+      o !== r && starts.has(o.start) && o.start <= r.start && o.end >= r.end && (o.start < r.start || o.end > r.end)));
+    const hidden = new Set();
+    for (const r of chosen) for (let i = r.start + 1; i <= r.end; i++) hidden.add(i);
+    const out = [], orig = [];
+    lines.forEach((line, i) => {
+      if (hidden.has(i)) return;
+      const r = chosen.find(x => x.start === i);
+      out.push(r ? line.replace(/([{\[])\s*$/, '$1 …  // 已折叠 ' + (r.end - r.start) + ' 行，点击 ▸ 展开') : line);
+      orig.push(i);
+    });
+    return { text: out.join('\n'), orig, folded: new Set(chosen.map(r => r.start)), count: chosen.length };
+  }
+
+  function renderGutter(text, fullText, errLine, info, foldable) {
+    const lines = String(text || '').split('\n');
+    const starts = foldable ? new Set(foldRanges(fullText).map(r => r.start)) : new Set();
+    const orig = info ? info.orig : lines.map((_, i) => i);
+    const folded = info ? info.folded : new Set();
+    return Array.from({ length: Math.max(lines.length, 16) }, (_, i) => {
+      const o = orig[i];
+      const lineNo = o === undefined ? i + 1 : o + 1;
+      const canFold = o !== undefined && starts.has(o);
+      const isFolded = o !== undefined && folded.has(o);
+      const arrow = canFold
+        ? `<span class="fold-arrow" data-action="toggleFold" data-arg="${o}" title="${isFolded ? '展开' : '折叠'}此 JSON 块">${isFolded ? '▸' : '▾'}</span>`
+        : '<span class="fold-arrow placeholder"></span>';
+      return `<div class="gutter-line ${lineNo === errLine ? 'gutter-err' : ''}">${arrow}<span class="gutter-num">${lineNo}</span></div>`;
+    }).join('');
+  }
+
+  function applyFoldView() {
+    document.querySelectorAll('.code-area[data-lang="json"][data-k="body.content"]').forEach(area => {
+      const req = current();
+      const full = req ? String((req.body && req.body.content) || '') : '';
+      const starts = foldState.get(histKey(area)) || new Set();
+      const info = starts.size ? buildFoldView(full, starts) : null;
+      const view = info ? info.text : full;
+      const stack = area.parentElement;
+      const pre = stack.querySelector('.code-highlight');
+      const gutter = stack.parentElement.querySelector('.code-gutter');
+      area.value = view;
+      area.readOnly = !!info;
+      const check = validateJsonText(full);
+      if (pre) pre.innerHTML = highlight(view) + '\n';
+      if (gutter) gutter.innerHTML = renderGutter(view, full, check.ok ? 0 : check.line, info, true);
+      const status = document.getElementById('jsonStatus');
+      if (status) {
+        status.className = 'json-status ' + (check.ok ? 'ok' : 'err');
+        status.textContent = info
+          ? `已折叠 ${info.count} 处 · 折叠预览为只读，点击行号旁 ▸ 展开后可编辑`
+          : (check.ok ? `✓ ${check.message}` : `✕ 第 ${check.line} 行：${check.message}`);
+      }
+    });
+  }
+
+  function toggleFold(start) {
+    const area = document.querySelector('.code-area[data-k="body.content"]');
+    if (!area) return;
+    const key = histKey(area);
+    const set = foldState.get(key) || new Set();
+    if (set.has(start)) set.delete(start); else set.add(start);
+    if (set.size) foldState.set(key, set); else foldState.delete(key);
+    applyFoldView();
+  }
+
   function codeEditor(value, field, placeholder = '', lang = 'json') {
     const text = String(value || '');
-    const lines = text.split('\n').length || 1;
-    const errLine = lang === 'json' && field === 'body.content' ? validateJsonText(text).line : 0;
-    const gutter = Array.from({ length: Math.max(lines, 16) }, (_, i) => `<div class="${i + 1 === errLine ? 'gutter-err' : ''}">${i + 1}</div>`).join('');
+    const jsonFold = lang === 'json' && field === 'body.content';
+    const errLine = jsonFold ? validateJsonText(text).line : 0;
+    const gutter = renderGutter(text, text, errLine, jsonFold ? buildFoldView(text, new Set()) : null, jsonFold);
     const painted = lang === 'js' ? highlightJs(text) : highlight(text);
     return `<div class="code-editor"><div class="code-gutter">${gutter}</div>
       <div class="code-stack"><pre class="code-highlight" aria-hidden="true">${painted}\n</pre>
@@ -813,8 +909,51 @@ console.log('响应耗时:', response.time + 'ms');`;
     bindCodeScroll();
   }
 
+  /* ------------------------------ 编辑撤销 / 重做 ------------------------------ */
+  const editHistory = new Map();
+  let applyingHistory = false;
+  function histKey(area) {
+    const req = current();
+    return (area.dataset.k || '') + '::' + (R.tempId ? 'tmp:' + R.tempId : (req ? req.id : ''));
+  }
+  function initHistory(area) {
+    const key = histKey(area);
+    if (!editHistory.has(key)) editHistory.set(key, { stack: [area.value], redo: [], at: 0 });
+  }
+  function pushSnapshot(area) {
+    if (applyingHistory) return;
+    initHistory(area);
+    const h = editHistory.get(histKey(area));
+    const value = area.value, now = Date.now();
+    if (h.stack.length > 1 && now - h.at < 450) h.stack[h.stack.length - 1] = value;
+    else if (h.stack[h.stack.length - 1] !== value) h.stack.push(value);
+    h.at = now;
+    h.redo.length = 0;
+    if (h.stack.length > 150) h.stack.shift();
+  }
+  function undoRedo(kind) {
+    const area = document.activeElement;
+    if (!area || !area.dataset || !area.dataset.code || area.readOnly) return false;
+    const h = editHistory.get(histKey(area));
+    if (!h) return false;
+    if (kind === 'undo') {
+      if (h.stack.length < 2) return false;
+      h.redo.push(h.stack.pop());
+    } else {
+      if (!h.redo.length) return false;
+      h.stack.push(h.redo.pop());
+    }
+    h.at = 0;
+    applyingHistory = true;
+    area.value = h.stack[h.stack.length - 1];
+    area.dispatchEvent(new Event('input', { bubbles: true }));
+    applyingHistory = false;
+    return true;
+  }
+
   function bindCodeScroll() {
     document.querySelectorAll('.code-area').forEach(area => {
+      initHistory(area);
       const stack = area.parentElement;
       const gutter = stack.parentElement.querySelector('.code-gutter');
       const pre = stack.querySelector('.code-highlight');
@@ -823,6 +962,7 @@ console.log('响应耗时:', response.time + 'ms');`;
         if (pre) { pre.scrollTop = area.scrollTop; pre.scrollLeft = area.scrollLeft; }
       });
     });
+    applyFoldView();
     bindVarTooltips();
   }
 
@@ -860,11 +1000,25 @@ console.log('响应耗时:', response.time + 'ms');`;
     if (!handle) return;
     handle.addEventListener('mousedown', e => {
       const pane = document.getElementById('responsePane');
-      if (!pane) return;
+      const split = handle.parentElement;
+      if (!pane || !split) return;
       const startX = e.clientX, startW = pane.getBoundingClientRect().width;
-      const move = ev => { pane.style.flex = '0 0 ' + Math.max(240, startW - (ev.clientX - startX)) + 'px'; };
-      const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
-      document.addEventListener('mousemove', move); document.addEventListener('mouseup', up);
+      const total = split.getBoundingClientRect().width;
+      const minRight = 240, minLeft = 380;
+      const maxW = Math.max(minRight, total - minLeft - 4);
+      e.preventDefault();
+      document.body.classList.add('resizing');
+      const move = ev => {
+        const w = Math.min(maxW, Math.max(minRight, startW - (ev.clientX - startX)));
+        pane.style.flex = '0 0 ' + w + 'px';
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('resizing');
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
     });
   }
 
@@ -1150,6 +1304,7 @@ console.log('响应耗时:', response.time + 'ms');`;
         r[arg === 'pre' ? 'preScript' : 'postScript'] = '';
         scheduleSave(); renderMain(); break;
       }
+      case 'toggleFold': toggleFold(Number(arg)); break;
       case 'formatBody': {
         const r = current(); if (!r) break;
         try { r.body.content = JSON.stringify(JSON.parse(r.body.content || '{}'), null, 2); toast('已格式化', 'success'); } catch (e) { toast('JSON 格式错误：' + e.message, 'error'); }
@@ -1455,17 +1610,17 @@ console.log('响应耗时:', response.time + 'ms');`;
         const stack = t.parentElement;
         const gutter = stack.parentElement.querySelector('.code-gutter');
         const pre = stack.querySelector('.code-highlight');
-        const check = t.dataset.lang === 'json' && t.dataset.k === 'body.content' ? validateJsonText(t.value) : null;
-        if (gutter) {
-          const lines = Math.max(t.value.split('\n').length, 16);
-          gutter.innerHTML = Array.from({ length: lines }, (_, i) => `<div class="${check && !check.ok && i + 1 === check.line ? 'gutter-err' : ''}">${i + 1}</div>`).join('');
-        }
+        const jsonFold = t.dataset.lang === 'json' && t.dataset.k === 'body.content';
+        const check = jsonFold ? validateJsonText(t.value) : null;
+        if (gutter) gutter.innerHTML = renderGutter(t.value, t.value, check && !check.ok ? check.line : 0,
+          jsonFold ? buildFoldView(t.value, new Set()) : null, jsonFold);
         if (pre) pre.innerHTML = (t.dataset.lang === 'js' ? highlightJs(t.value) : highlight(t.value)) + '\n';
         const status = document.getElementById('jsonStatus');
         if (status && check) {
           status.className = 'json-status ' + (check.ok ? 'ok' : 'err');
           status.textContent = check.ok ? `✓ ${check.message}` : `✕ 第 ${check.line} 行：${check.message}`;
         }
+        pushSnapshot(t);
       }
     }
   });
@@ -1547,6 +1702,11 @@ console.log('响应耗时:', response.time + 'ms');`;
     if (e.key === 'Escape') { closeModal(); hideMenu(); }
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); doSend(current()); }
     if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); }
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'z') {
+      if (undoRedo(e.shiftKey ? 'redo' : 'undo')) e.preventDefault();
+    } else if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'y') {
+      if (undoRedo('redo')) e.preventDefault();
+    }
   });
 
   window.addEventListener('message', event => {

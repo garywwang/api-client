@@ -502,3 +502,23 @@ body.vscode-dark .var-ref.undefined, body.vscode-high-contrast .var-ref.undefine
 .tree-folder.drop-target { background: var(--primary-soft); outline: 1px dashed var(--primary); color: var(--primary); }
 .tree-children.drop-target { background: rgba(155, 130, 255, .08); border-radius: 4px; }
 .context-menu .cm-sep { height: 1px; margin: 4px 2px; background: var(--border); }
+
+/* ---------- 分割线拖拽：限制范围、工具栏窄屏不换行 ---------- */
+body.resizing { user-select: none; cursor: col-resize; }
+.pane-toolbar { flex-wrap: nowrap; overflow: hidden; min-width: 0; }
+.pane-toolbar > * { flex: none; }
+.pane-toolbar > .spacer { flex: 1 1 auto; min-width: 4px; }
+.pane-toolbar > .body-modes { flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.pane-toolbar > .body-modes::-webkit-scrollbar { height: 0; }
+.radio-chip, .tiny-btn, .pane-toolbar .switch, .pane-toolbar .page-desc { white-space: nowrap; flex: none; }
+.sub-tabs, .resp-tabs { overflow-x: auto; white-space: nowrap; }
+.sub-tabs::-webkit-scrollbar, .resp-tabs::-webkit-scrollbar { height: 0; }
+
+/* ---------- JSON 编辑器折叠箭头 ---------- */
+.code-editor .code-gutter { width: 58px; min-width: 58px; padding-right: 4px; }
+.gutter-line { display: flex; align-items: center; justify-content: flex-end; gap: 2px; height: 19px; }
+.fold-arrow { width: 12px; flex: none; text-align: center; color: var(--muted); cursor: pointer; font-size: 9px; user-select: none; }
+.fold-arrow:hover { color: var(--primary); }
+.fold-arrow.placeholder { cursor: default; }
+.gutter-num { flex: 1; text-align: right; }
+.code-area[readonly] { cursor: default; }
