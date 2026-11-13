@@ -24,7 +24,7 @@
 **方式二：安装 VSIX**
 
 ```bash
-code --install-extension vsix/api-client-1.0.8.vsix   # 换成 vsix/ 目录下最新版本
+code --install-extension vsix/api-client-1.0.10.vsix   # 换成 vsix/ 目录下最新版本
 ```
 
 或在扩展面板右上角选择「从 VSIX 安装…」，选中 `vsix/` 目录下最新的 `.vsix` 文件。
