@@ -2,7 +2,7 @@
   "name": "ApiClientTools",
   "displayName": "ApiClientTools",
   "description": "类 Apifox 的 HTTP 接口调试工具：环境 Host 配置、自动化测试、临时用例、Mock 数据、一键导出并导入 Postman / Apifox",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "publisher": "garywwang",
   "license": "MIT",
   "repository": {

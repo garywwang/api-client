@@ -515,10 +515,25 @@ body.resizing { user-select: none; cursor: col-resize; }
 .sub-tabs::-webkit-scrollbar, .resp-tabs::-webkit-scrollbar { height: 0; }
 
 /* ---------- JSON 编辑器折叠箭头 ---------- */
-.code-editor .code-gutter { width: 58px; min-width: 58px; padding-right: 4px; }
-.gutter-line { display: flex; align-items: center; justify-content: flex-end; gap: 2px; height: 19px; }
-.fold-arrow { width: 12px; flex: none; text-align: center; color: var(--muted); cursor: pointer; font-size: 9px; user-select: none; }
-.fold-arrow:hover { color: var(--primary); }
+.code-editor .code-gutter { width: 74px; min-width: 74px; padding-right: 6px; }
+.gutter-line { display: flex; align-items: center; justify-content: flex-end; gap: 4px; height: 19px; }
+.fold-arrow {
+  width: 22px; height: 19px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 4px; color: var(--muted); cursor: pointer; user-select: none;
+}
+.fold-arrow::before {
+  content: ''; display: block; width: 0; height: 0;
+  border-left: 9px solid currentColor;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  transition: transform .12s ease;
+}
+.fold-arrow.expanded::before { transform: rotate(90deg); }
+.fold-arrow.collapsed::before { transform: rotate(0deg); }
+.fold-arrow.placeholder::before { display: none; }
 .fold-arrow.placeholder { cursor: default; }
+.fold-arrow:hover { background: var(--primary-soft); color: var(--primary); }
+.fold-arrow.placeholder:hover { background: transparent; color: var(--muted); }
 .gutter-num { flex: 1; text-align: right; }
 .code-area[readonly] { cursor: default; }

@@ -514,8 +514,8 @@ console.log('响应耗时:', response.time + 'ms');`;
       const canFold = o !== undefined && starts.has(o);
       const isFolded = o !== undefined && folded.has(o);
       const arrow = canFold
-        ? `<span class="fold-arrow" data-action="toggleFold" data-arg="${o}" title="${isFolded ? '展开' : '折叠'}此 JSON 块">${isFolded ? '▸' : '▾'}</span>`
-        : '<span class="fold-arrow placeholder"></span>';
+        ? `<span class="fold-arrow ${isFolded ? 'collapsed' : 'expanded'}" data-action="toggleFold" data-arg="${o}" title="${isFolded ? '展开' : '折叠'}此 JSON 块" aria-label="${isFolded ? '展开' : '折叠'}此 JSON 块"></span>`
+        : '<span class="fold-arrow placeholder" aria-hidden="true"></span>';
       return `<div class="gutter-line ${lineNo === errLine ? 'gutter-err' : ''}">${arrow}<span class="gutter-num">${lineNo}</span></div>`;
     }).join('');
   }
