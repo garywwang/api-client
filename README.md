@@ -19,14 +19,14 @@
 
 **方式一：插件市场（推荐）**
 
-Open VSX 市场地址：<https://open-vsx.org/extension/garywwang/api-client-tools>
+Open VSX 市场地址：<https://open-vsx.org/extension/garywwang/ApiClientTools>
 
-也可在 CodeBuddy / VS Code 扩展面板搜索 `API Client` 或 `@id:garywwang.api-client-tools`，点击安装。
+也可在 CodeBuddy / VS Code 扩展面板搜索 `ApiClientTools` 或 `@id:garywwang.ApiClientTools`，点击安装。
 
 **方式二：安装 VSIX**
 
 ```bash
-code --install-extension vsix/api-client-1.0.16.vsix   # 换成 vsix/ 目录下最新版本
+code --install-extension vsix/api-client-1.0.17.vsix   # 换成 vsix/ 目录下最新版本
 ```
 
 或在扩展面板右上角选择「从 VSIX 安装…」，选中 `vsix/` 目录下最新的 `.vsix` 文件。

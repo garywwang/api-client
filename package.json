@@ -2,14 +2,14 @@
   "name": "ApiClientTools",
   "displayName": "ApiClientTools",
   "description": "类 Apifox 的 HTTP 接口调试工具：环境 Host 配置、自动化测试、临时用例、Mock 数据、一键导出并导入 Postman / Apifox",
-  "version": "1.0.16",
+  "version": "1.0.17",
   "publisher": "garywwang",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "https://github.com/garywwang/api-client.git"
   },
-  "homepage": "https://open-vsx.org/extension/garywwang/api-client-tools",
+  "homepage": "https://open-vsx.org/extension/garywwang/ApiClientTools",
   "bugs": {
     "url": "https://github.com/garywwang/api-client/issues"
   },
@@ -51,7 +51,7 @@
       "activitybar": [
         {
           "id": "apiClient",
-          "title": "API Client 接口管理",
+          "title": "APIClientTools",
           "icon": "resources/icon.svg"
         }
       ]
