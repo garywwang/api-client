@@ -124,7 +124,9 @@ input, textarea, select { outline: none; }
 
 /* ---------- 左侧栏 ---------- */
 .workspace { flex: 1; display: flex; min-height: 0; }
-.sidebar { width: 226px; min-width: 226px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-soft); }
+.sidebar { width: 226px; min-width: 190px; border-right: 1px solid var(--border); display: flex; flex-direction: column; background: var(--bg-soft); }
+.side-resizer { width: 5px; flex: none; cursor: col-resize; background: transparent; transition: background .12s; }
+.side-resizer:hover, body.resizing .side-resizer { background: var(--primary-soft); }
 .side-head { display: flex; gap: 6px; padding: 9px 8px; border-bottom: 1px solid var(--border); }
 .search-input {
   flex: 1; height: 27px; border: 1px solid var(--border); border-radius: 5px;
@@ -524,9 +526,9 @@ body.resizing { user-select: none; cursor: col-resize; }
 }
 .fold-arrow::before {
   content: ''; display: block; width: 0; height: 0;
-  border-left: 9px solid currentColor;
-  border-top: 5px solid transparent;
-  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
   transition: transform .12s ease;
 }
 .fold-arrow.expanded::before { transform: rotate(90deg); }

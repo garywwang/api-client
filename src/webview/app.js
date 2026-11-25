@@ -402,7 +402,7 @@ console.log('响应耗时:', response.time + 'ms');`;
         <input class="url-input code-overlay" data-k="url" data-url-input="1" value="${esc(req.url)}" placeholder="{{baseUrl}}/api/path" spellcheck="false" />
       </div>
       <button class="send-btn" data-action="send" ${R.sending ? 'disabled' : ''}>${R.sending ? '发送中…' : '发送'}</button>
-      <button class="ghost-btn" data-action="saveAsCase" title="保存为临时测试用例">保存为用例</button>
+      <button class="ghost-btn" data-action="save" title="立即保存当前接口（Ctrl/Cmd + S）">保存</button>
       <button class="icon-btn" data-action="requestMore" title="更多操作">⋯</button>
     </div>${urlPreview(req)}`;
   }
@@ -906,6 +906,7 @@ console.log('响应耗时:', response.time + 'ms');`;
     else work = renderMockTab(req);
     main.innerHTML = renderTabs() + renderRequestHead(req) + renderMainTabs(req) + work;
     bindResizer();
+    initSidebarResizer();
     bindCodeScroll();
   }
 
@@ -995,6 +996,42 @@ console.log('响应耗时:', response.time + 'ms');`;
       });
     });
   }
+  let sideResizerBound = false;
+  function initSidebarResizer() {
+    const handle = document.querySelector('[data-side-resizer]');
+    const side = document.querySelector('.sidebar');
+    if (!handle || !side) return;
+    if (S.settings.sidebarWidth) {
+      side.style.width = S.settings.sidebarWidth + 'px';
+      side.style.minWidth = S.settings.sidebarWidth + 'px';
+    }
+    if (sideResizerBound) return;
+    sideResizerBound = true;
+    handle.addEventListener('mousedown', e => {
+      const workspace = handle.parentElement;
+      if (!workspace) return;
+      const startX = e.clientX, startW = side.getBoundingClientRect().width;
+      const maxW = workspace.getBoundingClientRect().width - 420;
+      e.preventDefault();
+      document.body.classList.add('resizing');
+      const move = ev => {
+        const w = Math.min(Math.max(startW + (ev.clientX - startX), 190), Math.max(maxW, 190));
+        side.style.width = w + 'px';
+        side.style.minWidth = w + 'px';
+      };
+      const up = () => {
+        document.removeEventListener('mousemove', move);
+        document.removeEventListener('mouseup', up);
+        document.body.classList.remove('resizing');
+        S.settings.sidebarWidth = Math.round(parseFloat(side.style.width) || 226);
+        scheduleSave();
+        toast('接口目录宽度：' + S.settings.sidebarWidth + 'px（已记住）');
+      };
+      document.addEventListener('mousemove', move);
+      document.addEventListener('mouseup', up);
+    });
+  }
+
   function bindResizer() {
     const handle = document.querySelector('[data-resizer]');
     if (!handle) return;
@@ -1318,8 +1355,9 @@ console.log('响应耗时:', response.time + 'ms');`;
       case 'send': doSend(req); break;
       case 'save': saveNow(); break;
       case 'saveAsCase': {
-        if (!req) break;
-        const copy = clone(req); copy.id = uid('tmp'); copy.name = req.name + ' · 临时用例';
+        const src = arg ? S.requests.find(x => x.id === arg) : req;
+        if (!src) break;
+        const copy = clone(src); copy.id = uid('tmp'); copy.name = src.name + ' · 临时用例';
         delete copy.lastResponse; S.temporary.unshift(copy);
         toast('已保存到临时测试用例', 'success'); saveNow(); renderAll(); break;
       }
@@ -1456,6 +1494,7 @@ console.log('响应耗时:', response.time + 'ms');`;
       : [
           { label: '重命名接口', action: 'rename', arg: `req::${id}::${(S.requests.find(x => x.id === id) || {}).name || ''}` },
           { label: '导出接口…', action: 'exportRequest', arg: id },
+          { label: '保存为用例', action: 'saveAsCase', arg: id },
           { label: '复制接口', action: 'duplicate', arg: `req::${id}::${(S.requests.find(x => x.id === id) || {}).name || ''} 副本` },
           { label: '删除接口', action: 'removeRequest', arg: id, danger: true }
         ];
